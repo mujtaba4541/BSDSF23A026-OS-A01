@@ -1,0 +1,30 @@
+.TH MYSTRLEN 3 "2024" "libmputils" "Library Functions"
+.SH NAME
+mystrlen \- calculate the length of a string
+.SH SYNOPSIS
+.nf
+.B #include "../include/mystrfunctions.h"
+.PP
+.BI "int mystrlen(const char *" s );
+.fi
+.SH DESCRIPTION
+.B mystrlen
+function calculates the length of the string pointed to by
+.IR s ,
+excluding the terminating null byte (\\0).
+.SH RETURN VALUE
+The number of bytes in the string pointed to by
+.IR s .
+.SH EXAMPLES
+.nf
+#include "../include/mystrfunctions.h"
+ 
+int main() {
+    char str[] = "Hello, World!";
+    int len = mystrlen(str);
+    // len will be 13
+    return 0;
+}
+.fi
+.SH AUTHOR
+Muhammad Arif Butt
