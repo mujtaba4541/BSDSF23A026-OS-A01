@@ -1,0 +1,4 @@
+This is line one.
+This is line two with search term.
+Line three has another search term here.
+Final line without search word.
