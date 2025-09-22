@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -I./include
+CFLAGS = -Wall -Wextra -I./include -fPIC
 AR = ar
 RANLIB = ranlib
 
@@ -11,10 +11,14 @@ BINDIR = bin
 LIBDIR = lib
 INCDIR = include
 
-# Library and targets
+# Library names
 LIBNAME = mputils
 STATIC_LIB = $(LIBDIR)/lib$(LIBNAME).a
+DYNAMIC_LIB = $(LIBDIR)/lib$(LIBNAME).so
+
+# Targets
 TARGET_STATIC = $(BINDIR)/client_static
+TARGET_DYNAMIC = $(BINDIR)/client_dynamic
 
 # Source files
 SRCS = $(wildcard $(SRCDIR)/*.c)
@@ -22,21 +26,28 @@ OBJS = $(SRCS:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 LIB_OBJS = $(filter-out $(OBJDIR)/main.o, $(OBJS))
 
 # Default target
-all: static
+all: static dynamic
 
-# Static library target
+# Static targets
 static: $(TARGET_STATIC)
 
-# Create static library
 $(STATIC_LIB): $(LIB_OBJS) | $(LIBDIR)
 	$(AR) rcs $@ $(LIB_OBJS)
 	$(RANLIB) $@
 
-# Link static executable
 $(TARGET_STATIC): $(OBJDIR)/main.o $(STATIC_LIB) | $(BINDIR)
 	$(CC) $(OBJDIR)/main.o -L$(LIBDIR) -l$(LIBNAME) -o $@
 
-# Compile source files to object files
+# Dynamic targets
+dynamic: $(TARGET_DYNAMIC)
+
+$(DYNAMIC_LIB): $(LIB_OBJS) | $(LIBDIR)
+	$(CC) -shared $(LIB_OBJS) -o $@
+
+$(TARGET_DYNAMIC): $(OBJDIR)/main.o | $(BINDIR)
+	$(CC) $(OBJDIR)/main.o -L$(LIBDIR) -l$(LIBNAME) -o $@
+
+# Compile source files to object files (with PIC for dynamic lib)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -48,19 +59,28 @@ $(BINDIR) $(LIBDIR) $(OBJDIR):
 clean:
 	rm -rf $(OBJDIR) $(BINDIR) $(LIBDIR)
 
-# Install (for later parts)
-install:
-	@echo "Install target will be implemented in later features"
-
 # Run static version
 run-static: $(TARGET_STATIC)
 	./$(TARGET_STATIC)
 
-# Analyze library
-analyze: $(STATIC_LIB)
-	@echo "=== Library contents ==="
-	ar -t $(STATIC_LIB)
-	@echo "=== Symbols in library ==="
-	nm $(STATIC_LIB)
+# Run dynamic version (with library path)
+run-dynamic: $(TARGET_DYNAMIC)
+	LD_LIBRARY_PATH=$(LIBDIR):$(LD_LIBRARY_PATH) ./$(TARGET_DYNAMIC)
 
-.PHONY: all static clean install run-static analyze
+# Analyze both versions
+analyze: $(STATIC_LIB) $(DYNAMIC_LIB)
+	@echo "=== Static Library Contents ==="
+	ar -t $(STATIC_LIB)
+	@echo "\n=== Dynamic Library Analysis ==="
+	readelf -d $(DYNAMIC_LIB)
+	@echo "\n=== File Sizes ==="
+	ls -lh $(BINDIR)/
+	@echo "\n=== Dynamic Executable Dependencies ==="
+	ldd $(TARGET_DYNAMIC)
+
+# Set library path for testing
+set-path:
+	export LD_LIBRARY_PATH=$(CURDIR)/$(LIBDIR):$$LD_LIBRARY_PATH
+	@echo "LD_LIBRARY_PATH set to: $$LD_LIBRARY_PATH"
+
+.PHONY: all static dynamic clean run-static run-dynamic analyze set-path
